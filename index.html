@@ -20,7 +20,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; transition: all 0.3s ease; }
         body { font-family: 'Poppins', 'Hind Siliguri', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 15px; }
         
-        .container { background: var(--bg); width: 100%; max-width: 500px; border-radius: 30px; box-shadow: var(--shadow); padding: 35px; text-align: center; position: relative; }
+        .container { background: var(--bg); width: 100%; max-width: 550px; border-radius: 30px; box-shadow: var(--shadow); padding: 35px; text-align: center; position: relative; }
         
         #custom-alert { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px); background: #ff7675; color: white; padding: 12px 25px; border-radius: 50px; z-index: 2000; transition: 0.5s; opacity: 0; font-weight: 600; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         #custom-alert.show { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -39,6 +39,13 @@
         .hidden { display: none; }
         .option { padding: 15px; margin-bottom: 15px; border-radius: 15px; cursor: pointer; background: var(--bg); box-shadow: var(--shadow); text-align: left; font-size: 0.95rem; font-weight: 500; color: #2d3436; border: 2px solid transparent; }
         .option.selected { box-shadow: var(--inner-shadow); color: var(--primary); font-weight: 700; border-left: 6px solid var(--primary); }
+
+        /* Recovery Quiz Card Styles */
+        .quiz-card { background: var(--bg); border-radius: 20px; box-shadow: var(--inner-shadow); padding: 20px; margin-bottom: 20px; text-align: left; }
+        .quiz-question { font-size: 1rem; font-weight: 600; color: #2d3436; margin-bottom: 12px; }
+        .options-group { display: flex; gap: 15px; }
+        .option-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; cursor: pointer; background: var(--bg); box-shadow: var(--shadow); font-weight: 600; color: #636e72; font-size: 0.9rem; text-align: center; }
+        .option-btn.selected { box-shadow: var(--inner-shadow); color: var(--primary); font-weight: 700; border: 2px solid var(--primary); }
 
         .score-circle { width: 140px; height: 140px; margin: 25px auto; position: relative; }
         .score-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.8rem; font-weight: 800; color: var(--primary); }
@@ -119,6 +126,7 @@
         <button class="btn btn-start" id="start-btn" onclick="startQuiz()">START ASSESSMENT</button>
     </div>
 
+    <!-- Main Quiz Container -->
     <div id="quiz" class="hidden">
         <p id="progress" style="font-weight: 700; color: var(--primary); font-size: 0.9rem; margin-bottom: 15px;"></p>
         <h3 id="question" style="margin-bottom: 25px; font-size: 1.05rem; line-height: 1.4; color: #2d3436;"></h3>
@@ -132,6 +140,14 @@
         </div>
     </div>
 
+    <!-- Recovery Quiz Container -->
+    <div id="recovery-quiz" class="hidden">
+        <h3 style="color: var(--primary); font-size: 1.15rem; margin-bottom: 20px; text-align: left;" id="recovery-header-title">Recovery Assessment</h3>
+        <div id="recovery-list"></div>
+        <button class="btn btn-start" id="submit-recovery-btn" onclick="submitRecoveryQuiz()">SUBMIT ASSESSMENT</button>
+    </div>
+
+    <!-- Result Container -->
     <div id="result" class="hidden">
         <h2 id="result-title" style="font-size: 1.3rem; color: var(--primary);">Assessment Result</h2>
         <div class="score-circle">
@@ -147,6 +163,7 @@
 <script>
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyOyx0GCRfHKqSOR3prDt_dc4oUd7z226eqVPdeC3LUjBz6KZL7fTl-QXT0WeM7Em8nHQ/exec";
     let currentLang = 'en', currentIdx = 0, userAnswers = [];
+    let recoveryAnswers = [null, null, null, null];
     let mentorNoticeShown = false;
 
     const quizData = [
@@ -160,6 +177,37 @@
         { q_en: "8. 2cc business should be", q_bn: "৮. ২ সিসি বিজনেস হতে হয়-", type: "written" },
         { q_en: "9. By when you're committed to complete 2cc?", q_bn: "৯. আপনি কতদিনের মধ্যে ২ সিসি শেষ করতে প্রতিশ্রুতিবদ্ধ?", a_en: ["Within 15 days", "Within 1 Month", "Within 2 Months"], a_bn: ["১৫ দিনের মধ্যে", "১ মাসের মধ্যে", "২ মাসের মধ্যে"], ans: "dynamic" },
         { q_en: "10. Can you ensure Opening business account by 5k billing within 5 days?", q_bn: "১০. ৫ দিনের মধ্যে ৫০০০ টাকার বিলিং করে একাউন্ট ওপেন করা নিশ্চিত করতে পারবেন?", type: "written" }
+    ];
+
+    const recoveryQuizData = [
+        { 
+            q_en: "1. Did you join today's group call?", 
+            q_bn: "১. আজকের গ্রুপ কলে জয়েন করেছেন কি?", 
+            options_en: ["Yes", "No"], 
+            options_bn: ["হ্যাঁ", "না"], 
+            ans: 0 
+        },
+        { 
+            q_en: "2. Did you watch today's class live?", 
+            q_bn: "২. আজকের ক্লাস কি লাইভে করেছেন?", 
+            options_en: ["Yes", "No"], 
+            options_bn: ["হ্যাঁ", "না"], 
+            ans: 0 
+        },
+        { 
+            q_en: "3. Did you send the class screenshot to your mentor?", 
+            q_bn: "৩. ক্লাসের স্ক্রিনশট কি মেন্টরকে দিয়েছেন?", 
+            options_en: ["Yes", "No"], 
+            options_bn: ["হ্যাঁ", "না"], 
+            ans: 0 
+        },
+        { 
+            q_en: "4. Do you respond and react in the group regularly?", 
+            q_bn: "৪. আপনি কি নিয়মিত গ্রুপে রেসপন্স এবং রিঅ্যাক্ট করেন?", 
+            options_en: ["Yes", "No"], 
+            options_bn: ["হ্যাঁ", "না"], 
+            ans: 0 
+        }
     ];
 
     userAnswers = new Array(quizData.length).fill(null);
@@ -179,6 +227,8 @@
             document.getElementById('start-btn').innerText = "অ্যাসেসমেন্ট শুরু করুন";
             document.getElementById('nextBtn').innerText = "পরবর্তী";
             document.getElementById('writtenAns').placeholder = "আপনার উত্তর এখানে লিখুন (ঐচ্ছিক)...";
+            document.getElementById('recovery-header-title').innerText = "রিকভারি অ্যাসেসমেন্ট";
+            document.getElementById('submit-recovery-btn').innerText = "জমা দিন (Submit)";
             document.getElementById('result-title').innerText = "অ্যাসেসমেন্ট ফলাফল";
             document.getElementById('score-label').innerText = "আপনার স্কোরের শতকরা হার";
             document.getElementById('support-btn').innerText = "সাপোর্ট";
@@ -197,6 +247,8 @@
             document.getElementById('start-btn').innerText = "START ASSESSMENT";
             document.getElementById('nextBtn').innerText = "NEXT";
             document.getElementById('writtenAns').placeholder = "Type your answer here (Optional)...";
+            document.getElementById('recovery-header-title').innerText = "Recovery Assessment";
+            document.getElementById('submit-recovery-btn').innerText = "SUBMIT ASSESSMENT";
             document.getElementById('result-title').innerText = "Assessment Result";
             document.getElementById('score-label').innerText = "Your Score Percentage";
             document.getElementById('support-btn').innerText = "Support";
@@ -208,6 +260,7 @@
         }
 
         if(!document.getElementById('quiz').classList.contains('hidden')) renderQuestion();
+        if(!document.getElementById('recovery-quiz').classList.contains('hidden')) renderRecoveryQuiz();
     }
 
     function openMentorNotice() {
@@ -270,18 +323,65 @@
             return showAlert(currentLang === 'bn' ? "একটি উত্তর নির্বাচন করুন!" : "Select an answer!");
         }
         
-        if(currentIdx < 9) { currentIdx++; renderQuestion(); } else showResult();
+        if(currentIdx < 9) { 
+            currentIdx++; 
+            renderQuestion(); 
+        } else {
+            // Transition to Recovery Quiz
+            document.getElementById('quiz').classList.add('hidden');
+            document.getElementById('recovery-quiz').classList.remove('hidden');
+            renderRecoveryQuiz();
+        }
     }
 
-    function prev() { if(currentIdx > 0) { currentIdx--; renderQuestion(); } }
+    function prev() { 
+        if(currentIdx > 0) { 
+            currentIdx--; 
+            renderQuestion(); 
+        } 
+    }
 
-    function showResult() {
-        document.getElementById('quiz').classList.add('hidden');
+    function renderRecoveryQuiz() {
+        const listDiv = document.getElementById('recovery-list');
+        listDiv.innerHTML = "";
+
+        recoveryQuizData.forEach((q, index) => {
+            let optionsHtml = "";
+            let opts = currentLang === 'en' ? q.options_en : q.options_bn;
+
+            opts.forEach((optText, optIdx) => {
+                let isSelected = recoveryAnswers[index] === optIdx ? 'selected' : '';
+                optionsHtml += `<button class="option-btn ${isSelected}" onclick="selectRecoveryOption(${index}, ${optIdx})">${optText}</button>`;
+            });
+
+            listDiv.innerHTML += `
+                <div class="quiz-card">
+                    <div class="quiz-question">${currentLang === 'en' ? q.q_en : q.q_bn}</div>
+                    <div class="options-group">${optionsHtml}</div>
+                </div>
+            `;
+        });
+    }
+
+    function selectRecoveryOption(qIdx, optIdx) {
+        recoveryAnswers[qIdx] = optIdx;
+        renderRecoveryQuiz();
+    }
+
+    function submitRecoveryQuiz() {
+        if (recoveryAnswers.includes(null)) {
+            return showAlert(currentLang === 'bn' ? "দয়া করে রিকভারি কুইজের সবগুলো প্রশ্নের উত্তর দিন!" : "Please answer all recovery questions!");
+        }
+
+        document.getElementById('recovery-quiz').classList.add('hidden');
         document.getElementById('result').classList.remove('hidden');
-        let totalScore = 0;
-        let finalAnswersForSheet = [];
-        const rev = document.getElementById('review-list'); rev.innerHTML = "";
 
+        let originalScore = 0;
+        let finalAnswersForSheet = [];
+        const rev = document.getElementById('review-list'); 
+        rev.innerHTML = "";
+
+        // Calculate Original 10 Questions Score
         userAnswers.forEach((ans, i) => {
             const q = quizData[i];
             let earned = 0, statusHtml = "";
@@ -314,13 +414,40 @@
                 ${correctLabel} <span style="color:var(--success); font-weight:700;">${correctText}</span></p>`;
             }
             
-            totalScore += earned;
+            originalScore += earned;
             finalAnswersForSheet.push(displayAnsText);
             rev.innerHTML += `<div class="review-item"><b>${i+1}. ${currentLang=='en'?q.q_en:q.q_bn}</b>${statusHtml}</div>`;
         });
 
-        document.getElementById('pctText').innerText = totalScore + "%";
-        document.getElementById('ring').style.strokeDashoffset = 283 - (283 * totalScore / 100);
+        // Calculate Recovery Marks (Each Yes = 10%, max 40%)
+        let recoveryMarks = 0;
+        recoveryAnswers.forEach((ans, i) => {
+            const rq = recoveryQuizData[i];
+            let isYes = (ans === 0); // index 0 is Yes
+            if(isYes) recoveryMarks += 10;
+
+            let opts = currentLang === 'en' ? rq.options_en : rq.options_bn;
+            let choiceLabel = currentLang === 'bn' ? "আপনার পছন্দ:" : "Your Choice:";
+            let recTitle = currentLang === 'en' ? rq.q_en : rq.q_bn;
+            
+            finalAnswersForSheet.push(opts[ans]);
+
+            rev.innerHTML += `
+                <div class="review-item">
+                    <b>[Recovery] ${recTitle}</b>
+                    <p style="margin-top:5px;">
+                        ${choiceLabel} <span style="color:${isYes ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">${opts[ans]}</span>
+                        <br><span>[Recovery Earned: ${isYes ? '+10%' : '0%'}]</span>
+                    </p>
+                </div>
+            `;
+        });
+
+        // Final Score calculation bounded at 100%
+        let finalScore = Math.min(100, originalScore + recoveryMarks);
+
+        document.getElementById('pctText').innerText = finalScore + "%";
+        document.getElementById('ring').style.strokeDashoffset = 283 - (283 * finalScore / 100);
 
         const userNameVal = document.getElementById('userName').value;
         const mentorNameVal = document.getElementById('mentorName').value;
@@ -331,14 +458,16 @@
             body: JSON.stringify({ 
                 name: userNameVal, 
                 mentor: mentorNameVal, 
-                percentage: totalScore + "%", 
+                originalScore: originalScore + "%",
+                recoveryMarks: recoveryMarks + "%",
+                percentage: finalScore + "%", 
                 answers: finalAnswersForSheet 
             }) 
         });
         
-        if(totalScore >= 50) {
+        if(finalScore >= 50) {
             document.getElementById('sel-text').innerText = (currentLang === 'bn' ? "প্রিয় " : "Dear ") + userNameVal + "!";
-            document.getElementById('popup-score-badge').innerText = totalScore + "%";
+            document.getElementById('popup-score-badge').innerText = finalScore + "%";
             document.getElementById('popup-mentor-display').innerText = (currentLang === 'bn' ? "মেন্টর: " : "Mentor: ") + mentorNameVal;
             setTimeout(() => document.getElementById('selection-notice').classList.add('show'), 1000);
         }
